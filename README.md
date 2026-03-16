@@ -1,7 +1,5 @@
 # MO-IT101-Seroje-M
 Initial Payroll System Code
-README
-Team Details
 
 Team Member: Marjury Seroje
 
