@@ -20,8 +20,7 @@ After computing the gross salary, the program also calculates the deductions suc
 
 The program also uses menu loops so the user can return to the menu after completing an action. This makes it easier to check another employee’s data or process payroll again without running the program from the beginning.
 
-Project Plan Link
-Project Plan:
+Project Plan Link: https://docs.google.com/document/d/1lNJsC3YT2bmXKfZ0K3WXaUS4003FzAH1sWM4Pwf2mkM/edit?usp=sharing
 
 
 
