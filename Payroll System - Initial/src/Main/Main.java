@@ -1,5 +1,24 @@
 package Main;
+/* Payroll System Update 03/22
+ *
+ * This updated program processes employee payroll based on attendance records and employee details stored in CSV files.
+ *
+ * Key Features for the updated program:
+ * - Efficient data handling using Maps, no longer repeats the reading means no redundant file reading
+ * - Accurate payroll computation including SSS, PhilHealth, Pag-IBIG, and tax
+ *
+ * Design Improvements:
+ * - Attendance and employee data are loaded once into memory
+ * - Avoids performance bottlenecks like the attendance part when processing multiple employees
+ * - Uses try-with-resources to prevent resource leaks
+ *
+ * This structure ensures scalability, maintainability, and correctness.
+ */
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
 import java.util.Locale;
+import java.util.Map;
 import java.util.Scanner;
 import java.io.BufferedReader;
 import java.io.FileReader;
@@ -20,12 +39,14 @@ public class Main {
 		System.out.println("Enter password");
 		String password = scanner.nextLine();
 		
+		Map<String, List<String[]>> attendanceMap = loadAttendance();
+		Map<String, String[]> employeeMap = loadEmployees();
 		//once the user checked in with their role, they will be routed to the appropriate menu
 		if(username.equals("employee") && password.equals("12345")){
 			 employeeLogin(scanner);
 		}
 		else if(username.equals("payroll_staff") && password.equals("12345")) {
-			payroll_StaffLogin(scanner);
+			payroll_StaffLogin(scanner, attendanceMap, employeeMap);
 		}
 		else {
 			System.out.println("Incorrect username and/or password. Access denied.");
@@ -58,8 +79,6 @@ public class Main {
              System.out.println("Invalid choice.");
          }
 		} while (choice != 2);
-		
-		scanner.close();
 		
 	}
 	// this method here reads employee details from the MotorPH_Employee Data - Employee Details.csv
@@ -115,7 +134,8 @@ public class Main {
 		
 	}
 		// this method is the menu of the payaroll_staff
-	private static void payroll_StaffLogin(Scanner scanner) {
+	private static void payroll_StaffLogin(Scanner scanner,  Map<String, List<String[]>> attendanceMap,
+			Map<String, String[]> employeeMap) {
 		int choice;
 		// the options will show again after showing an employee data, can choose 2 to exit the program
 		do {
@@ -129,7 +149,7 @@ public class Main {
 	    	scanner.nextLine();
 	             
 	    	if (choice == 1) {
-             processPayroll(scanner);
+             processPayroll(scanner, attendanceMap, employeeMap);
          }
          else if (choice == 2) {
              System.out.println("Program terminated.");
@@ -139,30 +159,29 @@ public class Main {
          }
 		} while (choice != 2);
 		
-		scanner.close();
 		
 	}
 	// this method allows the user (payroll_staff) to view one employee or all employees as they select the option
-	private static void processPayroll(Scanner scanner) {
+	private static void processPayroll(Scanner scanner, Map<String, List<String[]>> attendanceMap, Map<String, String[]> employeeMap ) {
 		System.out.println();
 		System.out.println("Select option: ");
 		System.out.println("1. One employee");
 		System.out.println("2. All employees");
-		System.out.println("2. Exit the program");
+		System.out.println("3. Exit the program");
 		System.out.println("Enter the number of your choice: ");
 		
 		int choice = scanner.nextInt();
 		scanner.nextLine();
 		
 		if (choice == 1) {
-         processOneEmployee(scanner); //to process/view payroll for only one employee
+         processOneEmployee(scanner, attendanceMap, employeeMap); //to process/view payroll for only one employee
      }
 		else if(choice == 2) {
 			System.out.print("Enter month (1-12): ");
 		    int month = scanner.nextInt();
 		    scanner.nextLine();
 
-		    processAllEmployees(month); //to process/view payroll for all employees
+		    processAllEmployees(month, attendanceMap, employeeMap); //to process/view payroll for all employees
 		}
      else if (choice == 3) {
          System.out.println("Program terminated.");
@@ -171,7 +190,8 @@ public class Main {
 	}
 	//method used to process for one employee, only short because their is another method called processemployeeData connected here
 	//also, this area is the key for processing all employee details
-	private static void processOneEmployee(Scanner scanner) {
+	private static void processOneEmployee(Scanner scanner, Map<String, List<String[]>> attendanceMap,
+			Map<String, String[]> employeeMap) {
 		
 		System.out.print("Enter employee number: ");
 	    String employeeNumber = scanner.nextLine();
@@ -180,18 +200,18 @@ public class Main {
 	    int month = scanner.nextInt();
 	    scanner.nextLine();
 
-	    processEmployeeData(employeeNumber, month);
+	    processEmployeeData(employeeNumber, month, attendanceMap, employeeMap);
 	}
-	//compute sss contribution based on salary range from the SSS CSV file
+	//compute SSS contribution based on salary range from the SSS CSV file
 	private static double computeSSS(double basicSalary) {
 		//maximum SSS salary cap
 		if (basicSalary > 24750) {
 	        basicSalary = 24750;
 	    }
 		
-		try {
+		try (
 			//reads the SSS contribution details based on salary range
-		        BufferedReader reader = new BufferedReader(new FileReader("resources/SSS Contribution.csv"));
+		        BufferedReader reader = new BufferedReader(new FileReader("resources/SSS Contribution.csv"))){
 		        
 		        String line;
 		        reader.readLine();
@@ -229,10 +249,12 @@ public class Main {
 		    return 0;
 		}
 	//compute PhilHealth contribution based on employee's salary
-	private static double computephilHealth(double basicSalary) {
+	private static double computePhilHealth(double basicSalary) {
+		// PhilHealth contribution thresholds for 2024
 		double salRange1 = 10000;
 		double salRange2 = 59999.99;
 		double salRange3 = 60000;
+		
 		double premiumRate = 0.03; 
 		double monthPremiumRate = 0.5;
 		double minContribution = 300;
@@ -241,7 +263,7 @@ public class Main {
 		if (basicSalary < salRange1) {
 			return minContribution;
 		}
-		else if (basicSalary > salRange1 && basicSalary < salRange2) {
+		else if (basicSalary > salRange1  && basicSalary < salRange2) {
 			
 			double contribution = basicSalary * premiumRate;
 			
@@ -250,7 +272,7 @@ public class Main {
 		}
 			return contribution;
 		}
-		else if (basicSalary > salRange3 ) {
+		else if (basicSalary > salRange3) {
 			return maxContribution;
 		}
 		
@@ -260,7 +282,9 @@ public class Main {
 		return employeeShare;
 	}
 	//compute PagIbig contribution based on employee's salary
+	// returns fixed maximum contribution based on policy
 	private static double computePagibig(double basicSalary) {
+		
 		if (basicSalary <=1000) {
 			basicSalary = 1000;
 		}
@@ -274,43 +298,45 @@ public class Main {
 	}
 	//compute withholding based on the taxable income
 	private static double computeTax(double taxableIncome) {
-		
-		int salRange1 = 20832;
-		int salRange2 = 33333;
-		int salRange3 = 66667;
-		int salRange4 = 166667;
-		int salRange5 = 666667;
-		int salRange6 = 666667;
+		//Tax bracket threshold for 2024
+		//computes total working hours based on company rules:
+		final int TAX_BRACKET_1 = 20832;
+		final int TAX_BRACKET_2 = 33333;
+		final int TAX_BRACKET_3 = 66667;
+		final int TAX_BRACKET_4 = 166667;
+		final int TAX_BRACKET_5 = 666667;
+		final int TAX_BRACKET_6 = 666667;
 		
 		// the condition for the tax deductions based on salary
-		if (taxableIncome <= salRange1) {
+		if (taxableIncome <= TAX_BRACKET_1) {
 			return 0;
 		}
-		else if (taxableIncome < salRange2) {
-			return (taxableIncome - salRange1) * 0.20;
+		else if (taxableIncome < TAX_BRACKET_2) {
+			return (taxableIncome - TAX_BRACKET_1) * 0.20;
 		}
-		else if (taxableIncome < salRange3) {
-			return 2500 + (taxableIncome - salRange2) * 0.25;
+		else if (taxableIncome < TAX_BRACKET_3) {
+			return 2500 + (taxableIncome - TAX_BRACKET_2) * 0.25;
 		}
-		else if (taxableIncome < salRange4) {
-			return 10833 + (taxableIncome - salRange3) * 0.30;
+		else if (taxableIncome < TAX_BRACKET_4) {
+			return 10833 + (taxableIncome - TAX_BRACKET_3) * 0.30;
 		}
-		else if (taxableIncome < salRange5) {
-			return 40833.33 + (taxableIncome - salRange4) * 0.32;
+		else if (taxableIncome < TAX_BRACKET_5) {
+			return 40833.33 + (taxableIncome - TAX_BRACKET_4) * 0.32;
 		}
 		else {
-			return 200833.33 + (taxableIncome - salRange6) * 0.35;
+			return 200833.33 + (taxableIncome - TAX_BRACKET_6) * 0.35;
 		}
 		
 	}
 	// Compute hours worked between login and logout times
+	// - 1 hour lunch break is deducted
 	private static double computeHours(LocalTime login, LocalTime logout) {
 		
 		LocalTime startTime = LocalTime.of(8, 0);
 		LocalTime graceTime = LocalTime.of(8, 10);
 		LocalTime cutoffTime = LocalTime.of(17, 0);
 		//Adjust login time if the employee started earlier than 8
-		if(login.isAfter(startTime)) {
+		if(login.isBefore(startTime)) {
 			login = startTime;
 		}
 		//this limits the log out time to official cutoff
@@ -333,35 +359,21 @@ public class Main {
 		
 	}
 	// reads all employees from the employee file and processes their payroll
-	private static void processAllEmployees(int month) {
-
-		try (BufferedReader reader =
-		         new BufferedReader(new FileReader("resources/MotorPH_Employee Data - Employee Details.csv"))) {
-
-		        String line;
-
-		        reader.readLine();
-
-		        while ((line = reader.readLine()) != null) {
-		        	//skip the empty lines
-		            if (line.trim().isEmpty()) continue;
-		         // split the CSV line into data
-		            String[] data = line.split(",(?=(?:[^\"]*\"[^\"]*\")*[^\"]*$)");
-
-		            String employeeNumber = data[0];
-		          //process payroll for the employee
-		            processEmployeeData(employeeNumber, month);
-
-		        }
-
-		    } catch (Exception e) {
-		        System.out.println("Error reading employee file.");
-		        e.printStackTrace();
-		    }
+	private static void processAllEmployees(int month, Map<String, List<String[]>> attendanceMap,
+			Map<String, String[]> employeeMap) {
+		// loop through all employees using the employeeMap
+		// this avoids reopening the employee file again 
+		for (String employeeNumber : employeeMap.keySet()) {
+		    processEmployeeData(employeeNumber, month, attendanceMap, employeeMap);
+		}
 	}
-	//processes payroll for all employees by reading through the employee details CSV
-	private static void processEmployeeData(String employeeNumber, int month) {
+	// this is the main method for payroll computation
+	// this uses employeeMap and attendanceMap to avoid repeated file reading (as a concern in the previous program because teh file is read many times0
+	// calculates hours worked, salary, and deductions
+	private static void processEmployeeData(String employeeNumber, int month, Map<String, List<String[]>> attendanceMap,
+			Map<String, String[]> employeeMap) {
 		//employee personal details
+		// get employee details directly from map instead of reading file again
 	    String firstName = "";
 	    String lastName = "";
 	    String birthday = "";
@@ -374,49 +386,33 @@ public class Main {
 	    double firstCutOff = 0;
 	    double secondCutOff = 0;
 	   
+	 
+	    String[] data = employeeMap.get(employeeNumber);
+
+	    if (data == null) {
+	    	    System.out.println("Employee number does not exist.");
+	    	    return;
+	    }
+
+	    found = true;
+
+	    lastName = data[1];
+	    firstName = data[2];
+	    birthday = data[3];
 	    
+	    // for parsing salary: remove commas and quotes before parsing to avoid number format error
 	    try {
-	    	 // read employee details file
-			BufferedReader reader = new BufferedReader(new FileReader("resources/MotorPH_Employee Data - Employee Details.csv"));
-			
-			String line;
-			
-			reader.readLine();
-			
-			while ((line = reader.readLine()) !=null) {
-				//to slip empty lines in CSV
-				if (line.trim().isEmpty()) continue;
-				//split the CSV line into data
-				String[] data = line.split(",(?=(?:[^\"]*\"[^\"]*\")*[^\"]*$)");
-				
-				if(!data[0].equals(employeeNumber)) continue;
-				
-				found = true;
-				//to get the employee's basic information
-				employeeNumber = data[0];
-				lastName = data[1];
-				firstName = data[2];
-				birthday = data[3];
-				//to get the basic salary
-				try {
-				    basicSalary = Double.parseDouble(data[13].replace(",", "").replace("\"", "").trim());
-				} catch (NumberFormatException e) {
-				    basicSalary = 0;
-				}
-				// to get the hourly rate
-				try {
-				    hourlyRate = Double.parseDouble(data[18].replace(",", "").replace("\"", "").trim());
-				} catch (NumberFormatException e) {
-				    hourlyRate = 0;
-				}
-				
-				break;
-			 }
-		    reader.close();
-		  
-		} catch (Exception e) {
-		    System.out.println("Error reading employee file.");
-		}
+	    	    basicSalary = Double.parseDouble(data[13].replace(",", "").replace("\"", "").trim());
+	    } catch (NumberFormatException e) {
+	    	    basicSalary = 0;
+	    }
+
+	    try {
+	    	    hourlyRate = Double.parseDouble(data[18].replace(",", "").replace("\"", "").trim());
+	    } catch (NumberFormatException e) {
+	    	    hourlyRate = 0;
+	    }
+	    
 	   // convert month number to month name or else it will only show 6 instead of June, etc
 	    Month monthObj = Month.of(month);
 	    String monthName = monthObj.getDisplayName(TextStyle.FULL, Locale.ENGLISH);
@@ -425,45 +421,29 @@ public class Main {
 		// get number of days in the selected month, helpful for the second cutoff since not all months end at day 30
 		int daysInMonth = YearMonth.of(2024, month).lengthOfMonth();
 		
-		
-		try {
-			//to read attendance file
-			BufferedReader reader = new BufferedReader(new FileReader("resources/MotorPH_Employee Data - Attendance Record.csv"));
-			
-			String line2;
-			
-			reader.readLine();
-			
-			while ((line2 = reader.readLine()) !=null) {
-				
-				if (line2.trim().isEmpty()) continue;
-				String [] data = line2.split(",");
-				// check if record belongs to the employee
-				if(!data[0].equals(employeeNumber)) continue;
-				// split date from attendance record
-				String[] dateParts = data[3].split("/");
-				
-				int recordMonth = Integer.parseInt(dateParts[0]);
-				int day = Integer.parseInt(dateParts[1]);
-				int year = Integer.parseInt(dateParts[2]);		
-				// only use records from the selected month
-				if(year !=2024 || recordMonth != month) continue;
-				// get login and logout time
-				LocalTime login = LocalTime.parse(data[4].trim(), timeFormat);
-				LocalTime logout = LocalTime.parse(data[5].trim(), timeFormat);
-				double hours = computeHours(login, logout);
-				// add hours to correct cutoff
-				if(day <=15) {
-					firstCutOff += hours;
-				}
-				else {secondCutOff += hours;
-				}
-			}
-	        reader.close();
-		}
-		// helpful to check on which part is having an issue
-		catch(Exception e) {
-		System.out.println("Error reading file.");
+		List<String[]> records = attendanceMap.get(employeeNumber);
+
+		// loop through attendance records of the employee
+		if (records != null) {
+			// used 'record' here because this contains attendance data which is used in this block
+		    for (String[] record : records) {
+
+		        String[] dateParts = record[3].split("/");
+
+		        int recordMonth = Integer.parseInt(dateParts[0]);
+		        int day = Integer.parseInt(dateParts[1]);
+		        int year = Integer.parseInt(dateParts[2]);
+		        // only include records that match selected month and year
+		        if (year != 2024 || recordMonth != month) continue;
+
+		        LocalTime login = LocalTime.parse(record[4].trim(), timeFormat);
+		        LocalTime logout = LocalTime.parse(record[5].trim(), timeFormat);
+
+		        double hours = computeHours(login, logout);
+		        // add hours to correct cutoff period (1–15 or 16–end of month)
+		        if (day <= 15) firstCutOff += hours;
+		        else secondCutOff += hours;
+		    }
 		}
 		// if employee was not found
 		if(!found){
@@ -476,7 +456,7 @@ public class Main {
 		double monthlyGrossSalary = firstGrossSalary + secondGrossSalary;
 		// the deductions
 		double sss = computeSSS(basicSalary);
-		double philHealth = computephilHealth(basicSalary);
+		double philHealth = computePhilHealth(basicSalary);
 		double pagibig  = computePagibig(basicSalary);
 		
 		double taxableIncome = monthlyGrossSalary - (sss + philHealth + pagibig);
@@ -484,8 +464,8 @@ public class Main {
 		
 		double totalDeductions = sss + philHealth + pagibig + tax;
 		
-		double firstNetSalary = firstGrossSalary;
-		double secondNetSalary = secondGrossSalary - totalDeductions;
+		double firstNetSalary = firstGrossSalary; // first cutoff has no deductions yet
+		double secondNetSalary = secondGrossSalary - totalDeductions; // second cutoff includes all deductions
 		
 		//first cut off display
 		System.out.println("\n================================================");
@@ -495,7 +475,7 @@ public class Main {
 		System.out.println("Cutoff Date: " + monthName + " 1 to " + monthName + " 15");
 		System.out.println("Total Hours Worked: " + firstCutOff);
 	    System.out.println("Gross Salary: " + firstGrossSalary);
-	    System.out.println("Net Salary:: " + firstNetSalary);
+	    System.out.println("Net Salary: " + firstNetSalary);
 		//second cut off display
 	    System.out.println("\nCutoff Date: " + monthName + " 16 to " + monthName + " "+ daysInMonth);
 	    System.out.println("Total Hours Worked : " + secondCutOff);
@@ -508,7 +488,66 @@ public class Main {
 	    System.out.println("Net Salary: " + secondNetSalary);
 	    System.out.println("================================================");
 	}
-	
+	// newly added method, this loads attendance records into a Map grouped by employee number
+	// the goal is to avoid reading the attendance file multiple times for each employee, as it is the Bottleneck in the previous program
+	// with this, it improves performance especially when processing all employees
+	private static Map<String, List<String[]>> loadAttendance() {
+
+	    Map<String, List<String[]>> attendanceMap = new HashMap<>();
+
+	    try (BufferedReader reader = new BufferedReader(
+	            new FileReader("resources/MotorPH_Employee Data - Attendance Record.csv"))) {
+
+	        String line;
+	        reader.readLine();
+
+	        while ((line = reader.readLine()) != null) {
+
+	            if (line.trim().isEmpty()) continue;
+
+	            String[] data = line.split(",");
+
+	            String empId = data[0];
+	            // this creates list if employee that does not exist yet, then add record
+	            attendanceMap.putIfAbsent(empId, new ArrayList<>());
+	            attendanceMap.get(empId).add(data);
+	        }
+
+	    } catch (Exception e) {
+	        System.out.println("Error loading attendance.");
+	    }
+
+	    return attendanceMap;
+	}
+	//using the method below to load employee details into a Map using employee number as key
+	// this allows direct access to employee data without scanning the file again
+	private static Map<String, String[]> loadEmployees() {
+
+	    Map<String, String[]> employeeMap = new HashMap<>();
+
+	    try (BufferedReader reader = new BufferedReader(
+	            new FileReader("resources/MotorPH_Employee Data - Employee Details.csv"))) {
+
+	        String line;
+	        reader.readLine(); // skip header
+
+	        while ((line = reader.readLine()) != null) {
+
+	            if (line.trim().isEmpty()) continue;
+
+	            String[] data = line.split(",(?=(?:[^\"]*\"[^\"]*\")*[^\"]*$)"); //  used to correctly split CSV values even if there are commas inside quotes
+
+	            String employeeNumber = data[0];
+
+	            employeeMap.put(employeeNumber, data);
+	        }
+
+	    } catch (Exception e) {
+	        System.out.println("Error loading employee file.");
+	    }
+
+	    return employeeMap;
+	}
 }
 
 
