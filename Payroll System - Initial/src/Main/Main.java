@@ -60,11 +60,13 @@ public class Main {
 		
 		//Loop until the user chooses to exit the program
 		do {
-			System.out.println(); //adding this so there would be a space between the select option and employee data
-			System.out.println("Select option: ");
-			System.out.println("1. Enter your employee number");
-			System.out.println("2. Exit the program");
-			System.out.println("Enter the number of your choice: ");
+			System.out.println("\n==============================================");
+			System.out.println("		EMPLOYEE PORTAL");
+			System.out.println("==============================================");
+			System.out.println("[ EMPLOYEE MENU]");
+			System.out.println("1. Enter Employee Number");
+			System.out.println("2. Exit");
+			System.out.println("\nEnter the number of your choice: ");
 		
 	    	choice = scanner.nextInt();
 	    	scanner.nextLine();
@@ -84,7 +86,7 @@ public class Main {
 	// this method here reads employee details from the MotorPH_Employee Data - Employee Details.csv
 	public static void employeeData (Scanner scanner) {
 			
-			System.out.println("Enter your employee number: ");
+			System.out.println("Enter Employee Number: ");
 			String employeeData = scanner.nextLine();
 			
 			String employeeNumber = "";
@@ -126,11 +128,13 @@ public class Main {
 		        return;
 			}
 			//display employee details
-			System.out.println("\n===================================");
-			System.out.println("Employee Number: " + employeeNumber);
-			System.out.println("Employee Name: " + lastName+ ", " + firstName);
-			System.out.println("Birthday: " + birthday);
-			System.out.println("===================================");
+			System.out.println("\n==============================================");
+			System.out.println("		EMPLOYEE SUMMARY");
+			System.out.println("==============================================");
+			System.out.println("Employee Number		: " + employeeNumber);
+			System.out.println("Employee Name		: " + lastName+ ", " + firstName);
+			System.out.println("Birthday		: " + birthday);
+			System.out.println("==============================================");
 		
 	}
 		// this method is the menu of the payaroll_staff
@@ -139,11 +143,13 @@ public class Main {
 		int choice;
 		// the options will show again after showing an employee data, can choose 2 to exit the program
 		do {
-			System.out.println();
-			System.out.println("Select option: ");
+			System.out.println("\n================================================");
+			System.out.println("	   MOTORPH PAYROLL SYSTEM");
+			System.out.println("================================================");
+			System.out.println("[ MAIN MENU ]");
 			System.out.println("1. Process Payroll");
-			System.out.println("2. Exit the program");
-			System.out.println("Enter the number of your choice: ");
+			System.out.println("2. Exit");
+			System.out.println("\nEnter the number of your choice: ");
 		
 	    	choice = scanner.nextInt();
 	    	scanner.nextLine();
@@ -163,12 +169,13 @@ public class Main {
 	}
 	// this method allows the user (payroll_staff) to view one employee or all employees as they select the option
 	private static void processPayroll(Scanner scanner, Map<String, List<String[]>> attendanceMap, Map<String, String[]> employeeMap ) {
-		System.out.println();
-		System.out.println("Select option: ");
-		System.out.println("1. One employee");
-		System.out.println("2. All employees");
-		System.out.println("3. Exit the program");
-		System.out.println("Enter the number of your choice: ");
+		System.out.println("\n----------------------------------------------");
+		System.out.println("		PAYROLL PROCESSING");
+		System.out.println("----------------------------------------------");
+		System.out.println("1. Process One Employee");
+		System.out.println("2. Process  All Employees");
+		System.out.println("3. Back to Main Menu");
+		System.out.println("\nEnter the number of your choice: ");
 		
 		int choice = scanner.nextInt();
 		scanner.nextLine();
@@ -177,7 +184,7 @@ public class Main {
          processOneEmployee(scanner, attendanceMap, employeeMap); //to process/view payroll for only one employee
      }
 		else if(choice == 2) {
-			System.out.print("Enter month (1-12): ");
+			System.out.print("Enter Month (6-12): ");
 		    int month = scanner.nextInt();
 		    scanner.nextLine();
 
@@ -193,10 +200,10 @@ public class Main {
 	private static void processOneEmployee(Scanner scanner, Map<String, List<String[]>> attendanceMap,
 			Map<String, String[]> employeeMap) {
 		
-		System.out.print("Enter employee number: ");
+		System.out.print("Enter Employee Number: ");
 	    String employeeNumber = scanner.nextLine();
 
-	    System.out.print("Enter month (1-12): ");
+	    System.out.print("Enter Month (6-12): ");
 	    int month = scanner.nextInt();
 	    scanner.nextLine();
 
@@ -251,35 +258,28 @@ public class Main {
 	//compute PhilHealth contribution based on employee's salary
 	private static double computePhilHealth(double basicSalary) {
 		// PhilHealth contribution thresholds for 2024
-		double salRange1 = 10000;
-		double salRange2 = 59999.99;
-		double salRange3 = 60000;
-		
-		double premiumRate = 0.03; 
-		double monthPremiumRate = 0.5;
-		double minContribution = 300;
-		double maxContribution = 1800;
-		
-		if (basicSalary < salRange1) {
-			return minContribution;
-		}
-		else if (basicSalary > salRange1  && basicSalary < salRange2) {
-			
-			double contribution = basicSalary * premiumRate;
-			
-			if (contribution > maxContribution ) {
-				contribution = maxContribution;
-		}
-			return contribution;
-		}
-		else if (basicSalary > salRange3) {
-			return maxContribution;
-		}
-		
-		double premium = basicSalary * premiumRate;
-		double employeeShare = premium / monthPremiumRate;
-		
-		return employeeShare;
+		double premiumRate = 0.03;
+	    double minContribution = 300;
+	    double maxContribution = 1800;
+
+	    double premium;
+
+	    // this is where we apply range rules
+	    if (basicSalary < 10000) {
+	        premium = minContribution;
+	    } else if (basicSalary <= 60000) {
+	        premium = basicSalary * premiumRate;
+	    } else {
+	        premium = maxContribution;
+	    }
+
+	    // Apply cap (safety)
+	    if (premium > maxContribution) {
+	        premium = maxContribution;
+	    }
+
+	    // Employee pays half and the employers pay half as well
+	    return premium / 2;
 	}
 	//compute PagIbig contribution based on employee's salary
 	// returns fixed maximum contribution based on policy
@@ -361,14 +361,18 @@ public class Main {
 	// reads all employees from the employee file and processes their payroll
 	private static void processAllEmployees(int month, Map<String, List<String[]>> attendanceMap,
 			Map<String, String[]> employeeMap) {
-		// loop through all employees using the employeeMap
-		// this avoids reopening the employee file again 
-		for (String employeeNumber : employeeMap.keySet()) {
-		    processEmployeeData(employeeNumber, month, attendanceMap, employeeMap);
-		}
+		
+		// this is to get all employee numbers
+		List<String> sortedEmployeeNumbers = new ArrayList<>(employeeMap.keySet());
+		// this is to sort numerically (10001 → 10100)
+	    sortedEmployeeNumbers.sort((a, b) -> Integer.compare(Integer.parseInt(a), Integer.parseInt(b)));
+	    // this is to loop in correct order
+	    for (String employeeNumber : sortedEmployeeNumbers) {
+	        processEmployeeData(employeeNumber, month, attendanceMap, employeeMap);
+	    }
 	}
 	// this is the main method for payroll computation
-	// this uses employeeMap and attendanceMap to avoid repeated file reading (as a concern in the previous program because teh file is read many times0
+	// this uses employeeMap and attendanceMap to avoid repeated file reading (as a concern in the previous program because the file is read many times0
 	// calculates hours worked, salary, and deductions
 	private static void processEmployeeData(String employeeNumber, int month, Map<String, List<String[]>> attendanceMap,
 			Map<String, String[]> employeeMap) {
@@ -467,25 +471,38 @@ public class Main {
 		double firstNetSalary = firstGrossSalary; // first cutoff has no deductions yet
 		double secondNetSalary = secondGrossSalary - totalDeductions; // second cutoff includes all deductions
 		
-		//first cut off display
+		
 		System.out.println("\n================================================");
-		System.out.println("Employee Number: " + employeeNumber);
-		System.out.println("Employee Name: " + lastName+ ", " + firstName);
-		System.out.println("Birthday: " + birthday);
-		System.out.println("Cutoff Date: " + monthName + " 1 to " + monthName + " 15");
-		System.out.println("Total Hours Worked: " + firstCutOff);
-	    System.out.println("Gross Salary: " + firstGrossSalary);
-	    System.out.println("Net Salary: " + firstNetSalary);
-		//second cut off display
-	    System.out.println("\nCutoff Date: " + monthName + " 16 to " + monthName + " "+ daysInMonth);
-	    System.out.println("Total Hours Worked : " + secondCutOff);
-	    System.out.println("Gross Salary: " + secondGrossSalary);
-	    System.out.println("Deductions: ");
-	    System.out.println("  SSS: " + sss);
-	    System.out.println("  PhilHealth: " + philHealth);
-	    System.out.println("  Pag-IBIG: " + pagibig);
-	    System.out.println("  Tax: " + tax);
-	    System.out.println("Net Salary: " + secondNetSalary);
+		System.out.println("		PAYROLL SUMMARY");
+		System.out.println("================================================");
+		System.out.println("Employee Number		: " + employeeNumber);
+		System.out.println("Employee Name		: " + lastName+ ", " + firstName);
+		System.out.println("Birthday		: " + birthday);
+		System.out.println("Month 			: " + monthName);
+		//first cut off display
+		System.out.println("------------------------------------------------");
+		System.out.println("[ FIRST CUTOFF ]");
+		System.out.println("Period			: " + monthName + " 1 to " + monthName + " 15");
+		System.out.println("Total Hours Worked	: " + firstCutOff);
+	    System.out.println("Gross Salary		: " + firstGrossSalary);
+	    System.out.println("Net Salary		: " + firstNetSalary);
+	    //second cut off display
+	    System.out.println("------------------------------------------------");
+	    System.out.println("[ SECOND CUTOFF ]");
+	    System.out.println("Period			: " + monthName + " 16 to " + monthName + " "+ daysInMonth);
+	    System.out.println("Total Hours Worked 	: " + secondCutOff);
+	    System.out.println("Gross Salary		: " + secondGrossSalary);
+	    System.out.println("\nGovernment Deductions: ");
+	    System.out.println("  SSS		: " + sss);
+	    System.out.println("  PhilHealth	: " + philHealth);
+	    System.out.println("  Pag-IBIG	: " + pagibig);
+	    System.out.println("  Tax		: " + tax);
+	    System.out.println("\nNet Salary		: " + secondNetSalary);
+	    System.out.println("------------------------------------------------");
+	    System.out.println("[ MONTHLY SUMMARY - " + monthName + " ]");
+	    System.out.println("Total Gross Salary	: " + monthlyGrossSalary);
+	    System.out.println("Total Deductions	: " + (sss + philHealth + pagibig + tax));
+	    System.out.println("Total Net Salary	: " + (firstNetSalary + secondNetSalary));
 	    System.out.println("================================================");
 	}
 	// newly added method, this loads attendance records into a Map grouped by employee number
